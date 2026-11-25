@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Astar · A* 寻路实验室</title>
+  <link rel="stylesheet" href="style.css">
+  <script defer src="search.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <header><div class="brand"><b aria-hidden="true">A<span>✳</span></b> Astar</div><span class="header-note">交互式算法实验室</span></header>
+  <main>
+    <h1>A* 寻路实验室</h1>
+    <p class="intro">设置起点、终点和障碍，逐步观察 A* 如何选择下一个格子。</p>
+    <div class="layout">
+      <section class="board panel" aria-labelledby="map-title">
+        <div class="section-head"><h2 id="map-title">搜索地图</h2><span class="mono">5 × 5</span></div>
+        <div class="toolbar" aria-label="地图编辑工具">
+          <button data-tool="wall" aria-pressed="true">障碍 / 擦除</button>
+          <button data-tool="start" aria-pressed="false">移动起点</button>
+          <button data-tool="goal" aria-pressed="false">移动终点</button>
+        </div>
+        <div class="grid" id="grid" role="group" aria-label="地图，坐标为行和列，从 0 开始"></div>
+        <div class="legend"><span><i class="open"></i>候选</span><span><i class="closed"></i>已展开</span><span><i class="current"></i>当前</span><span><i class="path"></i>路径</span><span><i class="wall"></i>障碍</span></div>
+        <div class="map-footer"><span id="hint">点击空格添加障碍，再点一次擦除。</span><button id="example">恢复示例</button></div>
+      </section>
+      <section class="panel inspector" aria-labelledby="step-title">
+        <div class="section-head"><h2 id="step-title">执行步骤</h2><span class="badge" id="step"></span></div>
+        <div class="reading" aria-live="polite"><h3 id="status"></h3><p id="explain"></p></div>
+        <div class="values" aria-label="当前节点分值"><div><small>已走 g</small><strong id="g"></strong></div><div><small>估算 h</small><strong id="h"></strong></div><div><small>总分 f</small><strong id="f"></strong></div></div>
+        <div class="playback"><button id="next" class="primary">下一步</button><button id="play">自动播放</button></div>
+        <div class="secondary"><button id="prev">上一步</button><button id="reset">重新演示</button><label>速度 <select id="speed"><option value="1200">慢</option><option value="650" selected>中</option><option value="240">快</option></select></label></div>
+        <div class="frontier"><h3>候选节点 <span id="count" class="mono"></span></h3><p>按 f 从小到大排列，同分时先行后列。</p><div id="queue"></div></div>
+      </section>
+    </div>
+    <p class="method"><b>如何读图</b>　坐标为（行，列），每次上下左右移动一格，代价为 1。候选格右下角显示 f = g + h，其中 h 为到终点的曼哈顿距离。</p>
+  </main>
+</body>
+</html>
