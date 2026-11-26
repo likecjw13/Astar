@@ -1,40 +1,108 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="dark">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Astar · A* 寻路实验室</title>
-  <link rel="stylesheet" href="style.css">
-  <script defer src="search.js"></script>
-  <script defer src="app.js"></script>
+  <meta name="description" content="逐语句追踪 C99 A* 寻路，与栅格、节点状态和搜索日志同步。">
+  <title>Astar · 路径规划实验室</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script defer src="js/astar.js"></script>
+  <script defer src="js/source.js"></script>
+  <script defer src="js/visualizer.js"></script>
+  <script defer src="js/app.js"></script>
 </head>
 <body>
-  <header><div class="brand"><b aria-hidden="true">A<span>✳</span></b> Astar</div><span class="header-note">交互式算法实验室</span></header>
+  <header class="top">
+    <a class="brand" href="./"><span class="brand-mark">A*</span><span>Astar <small>路径规划实验室</small></span></a>
+    <nav aria-label="页内导航"><a href="#workspace">实验台</a><a href="#data">搜索数据</a><a href="#export">C 语言联动</a></nav>
+    <button id="theme" class="ghost" type="button">切换浅色</button>
+  </header>
   <main>
-    <h1>A* 寻路实验室</h1>
-    <p class="intro">设置起点、终点和障碍，逐步观察 A* 如何选择下一个格子。</p>
-    <div class="layout">
-      <section class="board panel" aria-labelledby="map-title">
-        <div class="section-head"><h2 id="map-title">搜索地图</h2><span class="mono">5 × 5</span></div>
-        <div class="toolbar" aria-label="地图编辑工具">
-          <button data-tool="wall" aria-pressed="true">障碍 / 擦除</button>
-          <button data-tool="start" aria-pressed="false">移动起点</button>
-          <button data-tool="goal" aria-pressed="false">移动终点</button>
-        </div>
-        <div class="grid" id="grid" role="group" aria-label="地图，坐标为行和列，从 0 开始"></div>
-        <div class="legend"><span><i class="open"></i>候选</span><span><i class="closed"></i>已展开</span><span><i class="current"></i>当前</span><span><i class="path"></i>路径</span><span><i class="wall"></i>障碍</span></div>
-        <div class="map-footer"><span id="hint">点击空格添加障碍，再点一次擦除。</span><button id="example">恢复示例</button></div>
-      </section>
-      <section class="panel inspector" aria-labelledby="step-title">
-        <div class="section-head"><h2 id="step-title">执行步骤</h2><span class="badge" id="step"></span></div>
-        <div class="reading" aria-live="polite"><h3 id="status"></h3><p id="explain"></p></div>
-        <div class="values" aria-label="当前节点分值"><div><small>已走 g</small><strong id="g"></strong></div><div><small>估算 h</small><strong id="h"></strong></div><div><small>总分 f</small><strong id="f"></strong></div></div>
-        <div class="playback"><button id="next" class="primary">下一步</button><button id="play">自动播放</button></div>
-        <div class="secondary"><button id="prev">上一步</button><button id="reset">重新演示</button><label>速度 <select id="speed"><option value="1200">慢</option><option value="650" selected>中</option><option value="240">快</option></select></label></div>
-        <div class="frontier"><h3>候选节点 <span id="count" class="mono"></span></h3><p>按 f 从小到大排列，同分时先行后列。</p><div id="queue"></div></div>
-      </section>
+    <div class="heading">
+      <div><h1>A* 算法可视化</h1><p>编辑栅格、单步执行，观察每个节点的代价、父节点和搜索顺序。</p></div>
+      <div class="formula"><b>f = g + h</b><span>曼哈顿距离 · 四方向 · 单位代价</span></div>
     </div>
-    <p class="method"><b>如何读图</b>　坐标为（行，列），每次上下左右移动一格，代价为 1。候选格右下角显示 f = g + h，其中 h 为到终点的曼哈顿距离。</p>
+    <section class="panel experiment">
+      <label for="preset">教学实验</label>
+      <select id="preset">
+        <option value="basic">基础最短路径</option><option value="equal">等长路径与重复发现</option>
+        <option value="improve">更短路径与父节点更新</option><option value="blocked">Open 耗尽与寻路失败</option>
+        <option value="maze">复杂迷宫</option><option value="random">大规模随机障碍</option>
+      </select>
+      <p id="lesson"></p>
+    </section>
+    <section class="panel playback" aria-labelledby="play-title">
+      <div class="panel-head"><h2 id="play-title">执行控制</h2><span id="run-state" class="tag"></span></div>
+      <div class="controls transport">
+        <button id="play" class="primary" type="button">开始运行</button><button id="pause" type="button">暂停运行</button>
+        <button id="step" type="button">单步执行</button><button id="back" type="button">上一步</button><button id="round" type="button">下一轮</button>
+        <button id="finish" type="button">运行至结束</button><button id="reset" type="button">重置搜索</button>
+        <button id="car" type="button">播放小车</button>
+        <label class="range-label speed">速度 <input id="speed" type="range" min="1" max="10" value="5"><output id="speed-value">5 / 10</output></label>
+      </div>
+      <label class="progress">执行进度 <input id="timeline" type="range" min="0" max="0" value="0"><output id="position">0 / 0</output></label>
+    </section>
+    <div id="workspace" class="workspace">
+      <section class="panel map-panel" aria-labelledby="map-title">
+        <div class="panel-head"><h2 id="map-title">栅格地图</h2><span id="dimensions" class="tag"></span></div>
+        <div class="controls map-options">
+          <label>尺寸 <select id="size"><option value="5">5 × 5</option><option value="8">8 × 8</option><option value="10">10 × 10</option><option value="15">15 × 15</option><option value="20">20 × 20</option><option value="custom">自定义</option></select></label>
+          <div id="custom" class="controls" hidden>
+            <label>行 <input id="rows" type="number" min="1" max="30" value="5"></label>
+            <label>列 <input id="cols" type="number" min="1" max="30" value="5"></label>
+            <button id="apply-size" type="button">应用</button>
+          </div>
+          <label class="range-label">密度 <input id="density" type="range" min="0" max="100" value="25"><output id="density-value">25%</output></label>
+          <button id="random" type="button">随机障碍</button>
+        </div>
+        <div class="controls tools" aria-label="地图工具">
+          <button type="button" data-tool="inspect" aria-pressed="false">查看节点</button>
+          <button type="button" data-tool="wall" aria-pressed="true">障碍画笔</button>
+          <button type="button" data-tool="start" aria-pressed="false">设起点</button>
+          <button type="button" data-tool="goal" aria-pressed="false">设终点</button>
+          <button id="clear" type="button" class="ghost">清空地图</button>
+          <button id="default" type="button" class="ghost">恢复默认</button>
+        </div>
+        <div class="board-shell"><div id="board" aria-label="栅格，坐标顺序为行、列"></div></div>
+        <p id="map-hint" class="muted hint" role="status">点击或拖动画笔绘制或擦除障碍。选择「查看节点」可检查任意格子。</p>
+        <div class="legend" aria-label="地图图例">
+          <span><i class="start"></i>起点</span><span><i class="goal"></i>终点</span><span><i class="wall"></i>障碍</span><span><i class="open"></i>Open</span>
+          <span><i class="closed"></i>Closed</span><span><i class="current"></i>当前</span><span><i class="neighbor"></i>相邻</span><span><i class="path"></i>路径</span><span><i></i>未发现</span>
+        </div>
+        <div class="controls overlays" aria-label="格子信息显示">
+          <label><input id="show-coord" type="checkbox" checked> 坐标</label>
+          <label><input id="show-score" type="checkbox" checked> g / h / f</label>
+          <label><input id="show-parent" type="checkbox" checked> 父节点箭头</label>
+        </div>
+      </section>
+      <div class="side">
+        <section class="panel trace-panel" aria-labelledby="trace-title">
+          <div class="panel-head"><h2 id="trace-title">C 语言代码追踪</h2><div class="controls"><button id="copy-code" type="button">复制源码</button><button id="download" type="button">下载 .c</button></div></div>
+          <div class="trace-body">
+            <div id="code" class="code" tabindex="0" aria-label="C99 源码"></div>
+            <div class="explanation"><strong id="statement"></strong><p id="explain"></p></div>
+          </div>
+        </section>
+        <section class="panel node-panel" aria-labelledby="node-title">
+          <div class="panel-head"><h2 id="node-title">节点详情</h2><span id="node-status" class="tag"></span></div>
+          <div class="node-body"><pre id="node-struct"></pre><dl id="node-info"></dl></div>
+        </section>
+      </div>
+    </div>
+    <section id="data" class="data" aria-label="搜索数据">
+      <section class="panel metrics-panel"><div class="panel-head"><h2>运行数据</h2><span class="muted">计算耗时不含界面绘制及动画等待</span></div><div id="metrics"></div></section>
+      <div class="data-grid">
+        <section class="panel data-panel"><div class="panel-head"><h2>Open 集合</h2><span id="open-count" class="tag"></span></div><div id="open" class="table-wrap"></div></section>
+        <section class="panel data-panel"><div class="panel-head"><h2>Closed 集合</h2><span id="closed-count" class="tag"></span></div><div id="closed" class="table-wrap"></div></section>
+        <section class="panel data-panel logs"><div class="panel-head"><h2>搜索日志</h2><div class="controls"><button id="all-logs" type="button">全部历史</button><button id="copy-log" type="button">复制</button><button id="clear-log" type="button">清空</button></div></div><div id="log" class="log" tabindex="0"></div></section>
+      </div>
+    </section>
+    <section id="export" class="panel export">
+      <div><h2>C 语言联动</h2><p class="muted">第一行为起点与终点的坐标，后续每行对应地图的一行。将数据作为标准输入传给导出的 C99 程序。</p><button id="copy-input" type="button">复制标准输入</button></div>
+      <textarea id="stdin" readonly spellcheck="false" aria-label="C 程序标准输入"></textarea>
+    </section>
+    <dialog id="history"><div class="panel-head"><h2>全部搜索历史</h2><button id="close-history" type="button">关闭</button></div><pre id="history-content" tabindex="0"></pre></dialog>
+    <div id="toast" role="status" aria-live="polite"></div>
   </main>
 </body>
 </html>
